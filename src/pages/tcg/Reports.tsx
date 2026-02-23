@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { lenders, auditTrail } from "@/data/tcg";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ const ragChartData = activeLenders.map(l => ({
 }));
 
 const TCGReports = () => {
+  const navigate = useNavigate();
   const [selectedLender, setSelectedLender] = useState("");
 
   const lenderReport = useMemo(() => {
@@ -35,6 +37,14 @@ const TCGReports = () => {
     const alertPending = auditTrail.filter(e => e.lender === l.name && e.entityType === "Alert").length - alertAck;
     return { lender: l, auditEvents, alertAck, alertPending };
   }, [selectedLender]);
+
+  const kpis = [
+    { icon: Building2, label: "Active Lenders", value: activeLenders.length, route: "/tcg/lenders" },
+    { icon: Users, label: "Total Dealers", value: totalDealers, route: "/tcg/dealers" },
+    { icon: BarChart3, label: "Platform Avg Score", value: platformAvg.toFixed(1), route: "/tcg/lenders" },
+    { icon: AlertTriangle, label: "Pending Alerts", value: 13, route: "/tcg/audit-trail" },
+    { icon: ClipboardList, label: "Review Queue Pending", value: 4, route: "/tcg/manual-review" },
+  ];
 
   return (
     <div className="space-y-8">
@@ -48,14 +58,12 @@ const TCGReports = () => {
         <h3 className="text-lg font-semibold mb-4">Platform Summary Report</h3>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          {[
-            { icon: Building2, label: "Active Lenders", value: activeLenders.length },
-            { icon: Users, label: "Total Dealers", value: totalDealers },
-            { icon: BarChart3, label: "Platform Avg Score", value: platformAvg.toFixed(1) },
-            { icon: AlertTriangle, label: "Pending Alerts", value: 13 },
-            { icon: ClipboardList, label: "Review Queue Pending", value: 4 },
-          ].map(kpi => (
-            <Card key={kpi.label}>
+          {kpis.map(kpi => (
+            <Card
+              key={kpi.label}
+              className="cursor-pointer hover:border-accent transition-colors"
+              onClick={() => navigate(kpi.route)}
+            >
               <CardContent className="pt-5 flex items-center gap-3">
                 <kpi.icon className="w-5 h-5 text-muted-foreground shrink-0" />
                 <div>
@@ -102,7 +110,11 @@ const TCGReports = () => {
               </TableHeader>
               <TableBody>
                 {lenders.map(l => (
-                  <TableRow key={l.id} className={l.status === "Inactive" ? "opacity-50" : ""}>
+                  <TableRow
+                    key={l.id}
+                    className={`cursor-pointer hover:bg-muted/50 ${l.status === "Inactive" ? "opacity-50" : ""}`}
+                    onClick={() => navigate(`/tcg/lenders/${l.id}`)}
+                  >
                     <TableCell className="font-medium">{l.name}</TableCell>
                     <TableCell>{l.dealerCount}</TableCell>
                     <TableCell>{l.avgPortfolioScore?.toFixed(1) ?? "—"}</TableCell>
@@ -139,25 +151,25 @@ const TCGReports = () => {
 
         {lenderReport && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <Card>
+            <Card className="cursor-pointer hover:border-accent transition-colors" onClick={() => navigate("/tcg/dealers")}>
               <CardContent className="pt-5">
                 <div className="text-2xl font-bold">{lenderReport.lender.dealerCount}</div>
                 <div className="text-xs text-muted-foreground">Dealers Onboarded</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="cursor-pointer hover:border-accent transition-colors" onClick={() => navigate("/tcg/audit-trail")}>
               <CardContent className="pt-5">
                 <div className="text-2xl font-bold">{lenderReport.auditEvents}</div>
                 <div className="text-xs text-muted-foreground">Audit Events</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="cursor-pointer hover:border-accent transition-colors" onClick={() => navigate("/tcg/audit-trail")}>
               <CardContent className="pt-5">
                 <div className="text-2xl font-bold">{lenderReport.alertAck}</div>
                 <div className="text-xs text-muted-foreground">Alerts Acknowledged</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="cursor-pointer hover:border-accent transition-colors" onClick={() => navigate("/tcg/audit-trail")}>
               <CardContent className="pt-5">
                 <div className="text-2xl font-bold">{lenderReport.alertPending}</div>
                 <div className="text-xs text-muted-foreground">Alerts Pending</div>
