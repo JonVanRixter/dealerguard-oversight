@@ -16,6 +16,7 @@ import TCGDashboard from "./pages/tcg/Dashboard";
 import TCGLenders from "./pages/tcg/Lenders";
 import LenderDetail from "./pages/tcg/LenderDetail";
 import TCGDealers from "./pages/tcg/Dealers";
+import DealerDetail from "./pages/tcg/DealerDetail";
 import TCGManualReview from "./pages/tcg/ManualReview";
 import TCGAuditTrail from "./pages/tcg/AuditTrail";
 import TCGPlatformConfig from "./pages/tcg/PlatformConfig";
@@ -46,6 +47,7 @@ const App = () => (
                 <Route path="lenders" element={<TCGLenders />} />
                 <Route path="lenders/:id" element={<LenderDetail />} />
                 <Route path="dealers" element={<TCGDealers />} />
+                <Route path="dealers/:id" element={<DealerDetail />} />
                 <Route path="manual-review" element={<TCGManualReview />} />
                 <Route path="audit-trail" element={<TCGAuditTrail />} />
                 <Route path="platform-config" element={<TCGPlatformConfig />} />
