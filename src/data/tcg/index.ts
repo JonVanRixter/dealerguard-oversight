@@ -1,4 +1,5 @@
 export { lenders, type Lender, type TeamMember } from "./lenders";
+export { dealers, multiLenderData, type Dealer } from "./dealers";
 export { manualReviewQueue, type ManualReviewItem } from "./manualReviewQueue";
 export { auditTrail, type AuditTrailEntry } from "./auditTrail";
 export { platformLogs, type PlatformLog } from "./platformLogs";
