@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Eye, Ban, Users, BarChart3, ShieldCheck, Clock } from "lucide-react";
+import { Eye, Ban, Users, BarChart3, ShieldCheck, Clock, Download } from "lucide-react";
 import { format } from "date-fns";
 
 const LenderDetail = () => {
@@ -190,6 +190,13 @@ const LenderDetail = () => {
       <div className="flex gap-3">
         <Button onClick={handleViewAsLender} className="gap-2">
           <Eye className="w-4 h-4" /> View As Lender
+        </Button>
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => toast({ title: "Export ready", description: `${lender.name} compliance report PDF will be available in full MVP.` })}
+        >
+          <Download className="w-4 h-4" /> Export Lender Report
         </Button>
         <Button variant="destructive" onClick={() => setDeactivateOpen(true)} disabled={lender.status === "Inactive"} className="gap-2">
           <Ban className="w-4 h-4" /> Deactivate Lender
