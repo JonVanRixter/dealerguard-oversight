@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import TCGLayout from "./layouts/TCGLayout";
 import TCGDashboard from "./pages/tcg/Dashboard";
 import TCGLenders from "./pages/tcg/Lenders";
+import LenderDetail from "./pages/tcg/LenderDetail";
 import TCGDealers from "./pages/tcg/Dealers";
 import TCGManualReview from "./pages/tcg/ManualReview";
 import TCGAuditTrail from "./pages/tcg/AuditTrail";
@@ -43,6 +44,7 @@ const App = () => (
                 <Route index element={<Navigate to="/tcg/dashboard" replace />} />
                 <Route path="dashboard" element={<TCGDashboard />} />
                 <Route path="lenders" element={<TCGLenders />} />
+                <Route path="lenders/:id" element={<LenderDetail />} />
                 <Route path="dealers" element={<TCGDealers />} />
                 <Route path="manual-review" element={<TCGManualReview />} />
                 <Route path="audit-trail" element={<TCGAuditTrail />} />
