@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Shield, Bell, ChevronDown, LogOut, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
+import { lenders } from "@/data/tcg";
 
-const LENDERS = ["All Lenders", "Alpha Finance", "Beta Capital", "Gamma Lending", "Delta Credit"];
+const LENDERS = ["All Lenders", ...lenders.map(l => l.name)];
 
 const TCGHeader = () => {
   const { userName, logout } = useAuth();
