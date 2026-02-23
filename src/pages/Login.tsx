@@ -70,26 +70,15 @@ const Login = () => {
           {/* Demo Bypass — POC / Internal Testing Only */}
           <div className="mt-6 pt-5 border-t border-border">
             <p className="text-xs text-muted-foreground text-center mb-3">Quick access — POC demo only</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  const result = login("tcg@thecomplianceguys.co.uk", "TCGAdmin2026");
-                  if (result.success) navigate(result.redirect, { replace: true });
-                }}
-                className="flex-1 py-2 rounded-md bg-accent text-accent-foreground text-sm font-semibold hover:opacity-90 transition"
-              >
-                Enter as TCG
-              </button>
-              <button
-                onClick={() => {
-                  const result = login("test@lender.com", "password123");
-                  if (result.success) navigate(result.redirect, { replace: true });
-                }}
-                className="flex-1 py-2 rounded-md bg-muted text-muted-foreground text-sm font-semibold hover:opacity-90 transition"
-              >
-                Enter as Lender
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                const result = login("tcg@thecomplianceguys.co.uk", "TCGAdmin2026");
+                if (result.success) navigate(result.redirect, { replace: true });
+              }}
+              className="w-full py-2 rounded-md bg-accent text-accent-foreground text-sm font-semibold hover:opacity-90 transition"
+            >
+              Enter as TCG Oversight
+            </button>
           </div>
         </div>
       </div>
