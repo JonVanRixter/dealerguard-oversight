@@ -6,92 +6,105 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, XCircle, Clock, Eye } from "lucide-react";
 import { format } from "date-fns";
 
-const SECTIONS = [
-  "Governance & Oversight",
-  "Training & Competence",
-  "Customer Outcomes",
-  "Complaints Handling",
-  "Financial Promotions",
-  "Data Protection",
-  "KYC & AML",
-  "Financial Risk",
-];
+type DndStatus = "Pending Review" | "Verified" | "Rejected";
+
+interface DndEntry extends DoNotDealEntry {
+  submittedBy: string;
+  submittedDate: string;
+  verificationStatus: DndStatus;
+  verifiedBy: string | null;
+  verifiedDate: string | null;
+  rejectionReason: string | null;
+}
+
+const seedEntries = (): DndEntry[] =>
+  doNotDealList.map(e => ({
+    ...e,
+    submittedBy: e.addedBy,
+    submittedDate: e.dateAdded,
+    verificationStatus: "Verified" as DndStatus,
+    verifiedBy: "Tom Griffiths (TCG)",
+    verifiedDate: e.dateAdded,
+    rejectionReason: null,
+  }));
 
 const TCGPlatformConfig = () => {
-  // Section 1 — RAG Thresholds
-  const [greenThreshold, setGreenThreshold] = useState(75);
-  const [amberThreshold, setAmberThreshold] = useState(50);
-  const [ragConfirmOpen, setRagConfirmOpen] = useState(false);
+  const [dndList, setDndList] = useState<DndEntry[]>(seedEntries);
 
-  // Section 2 — CSS Thresholds
-  const [cssReward, setCssReward] = useState(75);
-  const [cssOversight, setCssOversight] = useState(75);
-
-  // Section 3 — Section Weights
-  const [weights, setWeights] = useState<number[]>(SECTIONS.map(() => 12.5));
-  const weightTotal = useMemo(() => weights.reduce((s, w) => s + w, 0), [weights]);
-
-  // Section 4 — DND
-  const [dndList, setDndList] = useState<DoNotDealEntry[]>([...doNotDealList]);
+  // Add DND
   const [addDndOpen, setAddDndOpen] = useState(false);
   const [newDndName, setNewDndName] = useState("");
   const [newDndType, setNewDndType] = useState("Dealer");
   const [newDndCH, setNewDndCH] = useState("");
   const [newDndReason, setNewDndReason] = useState("");
   const [newDndJustification, setNewDndJustification] = useState("");
+  const [newDndSubmitter, setNewDndSubmitter] = useState("");
 
-  const [removeTarget, setRemoveTarget] = useState<DoNotDealEntry | null>(null);
+  // Review modal
+  const [reviewTarget, setReviewTarget] = useState<DndEntry | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  // Remove modal
+  const [removeTarget, setRemoveTarget] = useState<DndEntry | null>(null);
   const [removeReason, setRemoveReason] = useState("");
 
-  const updateWeight = (idx: number, val: string) => {
-    const n = parseFloat(val) || 0;
-    setWeights(prev => prev.map((w, i) => (i === idx ? n : w)));
-  };
-
-  const handleRagSave = () => setRagConfirmOpen(true);
-  const confirmRagSave = () => {
-    setRagConfirmOpen(false);
-    toast({ title: "RAG thresholds updated", description: "Platform defaults have been saved." });
-  };
-
-  const handleCssSave = () => {
-    toast({ title: "CSS thresholds updated", description: `Reward ≥ ${cssReward}, Oversight < ${cssOversight}` });
-  };
-
-  const handleWeightSave = () => {
-    if (Math.abs(weightTotal - 100) > 0.01) return;
-    toast({ title: "Section weights updated", description: "Platform defaults have been saved." });
-  };
+  const pendingCount = dndList.filter(e => e.verificationStatus === "Pending Review").length;
 
   const handleAddDnd = () => {
-    if (!newDndName.trim() || !newDndReason.trim() || !newDndJustification.trim()) return;
-    const entry: DoNotDealEntry = {
+    if (!newDndName.trim() || !newDndReason.trim() || !newDndJustification.trim() || !newDndSubmitter.trim()) return;
+    const entry: DndEntry = {
       id: `pdnd${String(dndList.length + 1).padStart(3, "0")}`,
       entityName: newDndName.trim(),
       entityType: newDndType,
       companiesHouseNumber: newDndCH.trim() || null,
       reason: newDndReason.trim(),
-      addedBy: "TCG Operations",
+      addedBy: "Pending — " + newDndSubmitter.trim(),
       dateAdded: new Date().toISOString().slice(0, 10),
-      visibleToAllLenders: true,
+      visibleToAllLenders: false,
+      submittedBy: newDndSubmitter.trim(),
+      submittedDate: new Date().toISOString().slice(0, 10),
+      verificationStatus: "Pending Review",
+      verifiedBy: null,
+      verifiedDate: null,
+      rejectionReason: null,
     };
-    setDndList(prev => [...prev, entry]);
+    setDndList(prev => [entry, ...prev]);
     setAddDndOpen(false);
-    setNewDndName(""); setNewDndType("Dealer"); setNewDndCH(""); setNewDndReason(""); setNewDndJustification("");
-    toast({ title: "Entity added to Do Not Deal list", description: `${entry.entityName} is now visible to ALL lenders.` });
+    setNewDndName(""); setNewDndType("Dealer"); setNewDndCH(""); setNewDndReason(""); setNewDndJustification(""); setNewDndSubmitter("");
+    toast({ title: "DND submission received", description: `${entry.entityName} is pending TCG verification before broadcast.` });
+  };
+
+  const handleVerify = () => {
+    if (!reviewTarget) return;
+    setDndList(prev => prev.map(e =>
+      e.id === reviewTarget.id
+        ? { ...e, verificationStatus: "Verified" as DndStatus, verifiedBy: "TCG Operations", verifiedDate: new Date().toISOString().slice(0, 10), visibleToAllLenders: true, addedBy: e.submittedBy }
+        : e
+    ));
+    toast({ title: "DND entry verified", description: `${reviewTarget.entityName} is now broadcast to all lenders.` });
+    setReviewTarget(null);
+  };
+
+  const handleReject = () => {
+    if (!reviewTarget || !rejectionReason.trim()) return;
+    setDndList(prev => prev.map(e =>
+      e.id === reviewTarget.id
+        ? { ...e, verificationStatus: "Rejected" as DndStatus, rejectionReason: rejectionReason.trim(), verifiedBy: "TCG Operations", verifiedDate: new Date().toISOString().slice(0, 10) }
+        : e
+    ));
+    toast({ title: "DND entry rejected", description: `${reviewTarget.entityName} will not be broadcast.` });
+    setReviewTarget(null);
+    setRejectionReason("");
   };
 
   const handleRemoveDnd = () => {
     if (!removeTarget || !removeReason.trim()) return;
     setDndList(prev => prev.filter(e => e.id !== removeTarget.id));
-    // Append to audit trail state
     (auditTrail as any[]).unshift({
       id: `at${Date.now()}`,
       timestamp: new Date().toISOString(),
@@ -108,115 +121,55 @@ const TCGPlatformConfig = () => {
     setRemoveReason("");
   };
 
+  const statusBadge = (status: DndStatus) => {
+    switch (status) {
+      case "Pending Review":
+        return <Badge variant="outline" className="gap-1 text-amber-600 border-amber-400"><Clock className="w-3 h-3" /> Pending Review</Badge>;
+      case "Verified":
+        return <Badge variant="outline" className="gap-1 text-emerald-600 border-emerald-400"><CheckCircle2 className="w-3 h-3" /> Verified</Badge>;
+      case "Rejected":
+        return <Badge variant="outline" className="gap-1 text-destructive border-destructive"><XCircle className="w-3 h-3" /> Rejected</Badge>;
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold text-foreground mb-1">Platform Config</h2>
-        <p className="text-muted-foreground">System-wide settings, thresholds, and configurations.</p>
+        <h2 className="text-2xl font-bold text-foreground mb-1">Platform Configuration</h2>
+        <p className="text-muted-foreground">
+          Manage the platform-wide Do Not Deal list. RAG thresholds, CSS thresholds, and section weightings are configured per-lender during onboarding.
+        </p>
       </div>
 
-      {/* Section 1 — RAG Thresholds */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Default RAG Thresholds</CardTitle>
-          <CardDescription>Platform defaults — lenders inherit these unless customised.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
+      {/* Info Card */}
+      <Card className="border-blue-300 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
+        <CardContent className="pt-5 text-sm text-muted-foreground">
+          <strong className="text-foreground">Note:</strong> RAG thresholds, CSS Oversight/Reward thresholds, and compliance section weightings are lender-specific settings configured during lender onboarding. They can be viewed and edited on each <span className="font-medium text-foreground">Lender Detail</span> page.
+        </CardContent>
+      </Card>
+
+      {/* Pending Review Alert */}
+      {pendingCount > 0 && (
+        <Card className="border-amber-400 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-700">
+          <CardContent className="pt-5 flex items-center gap-3">
+            <Clock className="w-5 h-5 text-amber-600 shrink-0" />
             <div>
-              <Label className="text-sm">Green Threshold (≥)</Label>
-              <div className="flex items-center gap-4 mt-2">
-                <Slider
-                  value={[greenThreshold]}
-                  onValueChange={([v]) => { setGreenThreshold(v); if (v <= amberThreshold) setAmberThreshold(v - 1); }}
-                  min={1} max={100} step={1} className="flex-1"
-                />
-                <span className="text-sm font-mono w-10 text-right">{greenThreshold}</span>
-              </div>
+              <div className="font-semibold text-foreground">{pendingCount} DND {pendingCount === 1 ? "submission" : "submissions"} awaiting verification</div>
+              <p className="text-xs text-muted-foreground">Lender-submitted entries require TCG review before broadcast.</p>
             </div>
-            <div>
-              <Label className="text-sm">Amber Threshold (≥)</Label>
-              <div className="flex items-center gap-4 mt-2">
-                <Slider
-                  value={[amberThreshold]}
-                  onValueChange={([v]) => { if (v < greenThreshold) setAmberThreshold(v); }}
-                  min={1} max={99} step={1} className="flex-1"
-                />
-                <span className="text-sm font-mono w-10 text-right">{amberThreshold}</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 text-sm">
-            <Badge className="bg-green-600 hover:bg-green-600 text-white">Green ≥ {greenThreshold}</Badge>
-            <Badge className="bg-amber-500 hover:bg-amber-500 text-white">Amber {amberThreshold}–{greenThreshold - 1}</Badge>
-            <Badge className="bg-red-600 hover:bg-red-600 text-white">Red &lt; {amberThreshold}</Badge>
-          </div>
-          <Button onClick={handleRagSave}>Save Defaults</Button>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Section 2 — CSS Thresholds */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">CSS Oversight / Reward Thresholds</CardTitle>
-          <CardDescription>
-            Dealers with CSS ≥ {cssReward} are eligible for recognition. Dealers with CSS &lt; {cssOversight} are placed under enhanced oversight.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Reward Threshold (≥)</Label>
-              <Input type="number" min={0} max={100} value={cssReward} onChange={e => setCssReward(Number(e.target.value))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Oversight Threshold (&lt;)</Label>
-              <Input type="number" min={0} max={100} value={cssOversight} onChange={e => setCssOversight(Number(e.target.value))} />
-            </div>
-          </div>
-          <Button onClick={handleCssSave}>Save Thresholds</Button>
-        </CardContent>
-      </Card>
-
-      {/* Section 3 — Section Weights */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Section Weighting Defaults</CardTitle>
-          <CardDescription>Configure the default weight for each compliance section. Weights must total 100%.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            {SECTIONS.map((s, i) => (
-              <div key={s} className="flex items-center gap-3">
-                <span className="text-sm flex-1">{s}</span>
-                <Input
-                  type="number" min={0} max={100} step={0.5}
-                  value={weights[i]}
-                  onChange={e => updateWeight(i, e.target.value)}
-                  className="w-24 text-right"
-                />
-                <span className="text-xs text-muted-foreground w-4">%</span>
-              </div>
-            ))}
-          </div>
-          <div className={`flex items-center gap-2 text-sm font-medium ${Math.abs(weightTotal - 100) > 0.01 ? "text-red-600" : "text-green-600"}`}>
-            {Math.abs(weightTotal - 100) > 0.01 && <AlertTriangle className="w-4 h-4" />}
-            Total: {weightTotal.toFixed(1)}%
-            {Math.abs(weightTotal - 100) > 0.01 && " — must equal 100%"}
-          </div>
-          <Button onClick={handleWeightSave} disabled={Math.abs(weightTotal - 100) > 0.01}>Save Weights</Button>
-        </CardContent>
-      </Card>
-
-      {/* Section 4 — Do Not Deal List */}
+      {/* DND List */}
       <Card>
         <CardHeader className="flex-row items-start justify-between space-y-0">
           <div>
             <CardTitle className="text-base">Platform-Wide Do Not Deal List</CardTitle>
-            <CardDescription>Entities flagged across all lenders on the platform.</CardDescription>
+            <CardDescription>Lenders submit entries → TCG verifies → then broadcast to all lenders.</CardDescription>
           </div>
           <Button size="sm" onClick={() => setAddDndOpen(true)} className="gap-1.5">
-            <Plus className="w-4 h-4" /> Add to Platform DND
+            <Plus className="w-4 h-4" /> Submit DND Entry
           </Button>
         </CardHeader>
         <CardContent>
@@ -226,58 +179,59 @@ const TCGPlatformConfig = () => {
                 <TableHead>Entity Name</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Reason</TableHead>
-                <TableHead>Added By</TableHead>
-                <TableHead>Date Added</TableHead>
-                <TableHead className="w-10"></TableHead>
+                <TableHead>Submitted By</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {dndList.map(entry => (
-                <TableRow key={entry.id}>
+                <TableRow key={entry.id} className={entry.verificationStatus === "Rejected" ? "opacity-50" : ""}>
                   <TableCell className="font-medium">{entry.entityName}</TableCell>
                   <TableCell><Badge variant="outline">{entry.entityType}</Badge></TableCell>
                   <TableCell className="max-w-[220px] truncate text-xs text-muted-foreground" title={entry.reason}>
                     {entry.reason.length > 80 ? entry.reason.slice(0, 80) + "…" : entry.reason}
                   </TableCell>
-                  <TableCell className="text-xs">{entry.addedBy}</TableCell>
-                  <TableCell className="text-xs">{format(new Date(entry.dateAdded), "dd MMM yyyy")}</TableCell>
+                  <TableCell className="text-xs">{entry.submittedBy}</TableCell>
+                  <TableCell className="text-xs">{format(new Date(entry.submittedDate), "dd MMM yyyy")}</TableCell>
+                  <TableCell>{statusBadge(entry.verificationStatus)}</TableCell>
                   <TableCell>
-                    <Button size="icon" variant="ghost" onClick={() => setRemoveTarget(entry)} className="text-destructive hover:text-destructive">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      {entry.verificationStatus === "Pending Review" && (
+                        <Button size="icon" variant="ghost" onClick={() => setReviewTarget(entry)} title="Review">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {entry.verificationStatus === "Verified" && (
+                        <Button size="icon" variant="ghost" onClick={() => setRemoveTarget(entry)} className="text-destructive hover:text-destructive" title="Remove">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
               {dndList.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No entries.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No entries.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* RAG Confirm Modal */}
-      <Dialog open={ragConfirmOpen} onOpenChange={setRagConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Update Default RAG Thresholds?</DialogTitle>
-            <DialogDescription>Updating defaults will apply to all lenders who have not customised their thresholds. Continue?</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRagConfirmOpen(false)}>Cancel</Button>
-            <Button onClick={confirmRagSave}>Confirm</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add DND Modal */}
+      {/* Submit DND Modal */}
       <Dialog open={addDndOpen} onOpenChange={setAddDndOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add to Platform Do Not Deal List</DialogTitle>
-            <DialogDescription>This entity will be visible to ALL lenders on the platform.</DialogDescription>
+            <DialogTitle>Submit Do Not Deal Entry</DialogTitle>
+            <DialogDescription>This submission will be reviewed by TCG before being broadcast to all lenders.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Submitted By (Lender)</Label>
+              <Input value={newDndSubmitter} onChange={e => setNewDndSubmitter(e.target.value)} placeholder="e.g. Apex Motor Finance Ltd" />
+            </div>
             <div className="space-y-1.5">
               <Label>Entity Name</Label>
               <Input value={newDndName} onChange={e => setNewDndName(e.target.value)} placeholder="Company or person name" />
@@ -306,7 +260,35 @@ const TCGPlatformConfig = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDndOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddDnd} disabled={!newDndName.trim() || !newDndReason.trim() || !newDndJustification.trim()}>Add Entity</Button>
+            <Button onClick={handleAddDnd} disabled={!newDndName.trim() || !newDndReason.trim() || !newDndJustification.trim() || !newDndSubmitter.trim()}>Submit for Review</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Review Modal */}
+      <Dialog open={!!reviewTarget} onOpenChange={open => { if (!open) { setReviewTarget(null); setRejectionReason(""); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Review DND Submission</DialogTitle>
+            <DialogDescription>Verify this entry before broadcasting to all lenders.</DialogDescription>
+          </DialogHeader>
+          {reviewTarget && (
+            <div className="space-y-3 py-2 text-sm">
+              <div><span className="text-muted-foreground">Entity:</span> <strong>{reviewTarget.entityName}</strong> ({reviewTarget.entityType})</div>
+              <div><span className="text-muted-foreground">Submitted by:</span> {reviewTarget.submittedBy}</div>
+              <div><span className="text-muted-foreground">Reason:</span> {reviewTarget.reason}</div>
+              {reviewTarget.companiesHouseNumber && (
+                <div><span className="text-muted-foreground">CH Number:</span> {reviewTarget.companiesHouseNumber}</div>
+              )}
+              <div className="pt-2 border-t border-border space-y-1.5">
+                <Label>Rejection Reason (only if rejecting)</Label>
+                <Input value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Reason for rejection…" />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="destructive" onClick={handleReject} disabled={!rejectionReason.trim()}>Reject</Button>
+            <Button onClick={handleVerify} className="gap-1.5"><CheckCircle2 className="w-4 h-4" /> Verify & Broadcast</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
