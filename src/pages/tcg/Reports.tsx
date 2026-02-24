@@ -53,90 +53,7 @@ const TCGReports = () => {
         <p className="text-muted-foreground">Generate and export compliance and performance reports.</p>
       </div>
 
-      {/* Section A — Platform Summary */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Platform Summary Report</h3>
-
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          {kpis.map(kpi => (
-            <Card
-              key={kpi.label}
-              className="cursor-pointer hover:border-accent transition-colors"
-              onClick={() => navigate(kpi.route)}
-            >
-              <CardContent className="pt-5 flex items-center gap-3">
-                <kpi.icon className="w-5 h-5 text-muted-foreground shrink-0" />
-                <div>
-                  <div className="text-2xl font-bold">{kpi.value}</div>
-                  <div className="text-[11px] text-muted-foreground">{kpi.label}</div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* RAG Chart */}
-        <Card className="mb-6">
-          <CardHeader><CardTitle className="text-base">RAG Distribution by Lender</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={ragChartData} barCategoryGap="20%">
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Green" stackId="a" fill="#16a34a" />
-                <Bar dataKey="Amber" stackId="a" fill="#f59e0b" />
-                <Bar dataKey="Red" stackId="a" fill="#dc2626" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Lender Performance Table */}
-        <Card className="mb-4">
-          <CardContent className="pt-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Lender</TableHead>
-                  <TableHead>Dealers</TableHead>
-                  <TableHead>Avg Score</TableHead>
-                  <TableHead>Green</TableHead>
-                  <TableHead>Amber</TableHead>
-                  <TableHead>Red</TableHead>
-                  <TableHead>Last Login</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lenders.map(l => (
-                  <TableRow
-                    key={l.id}
-                    className={`cursor-pointer hover:bg-muted/50 ${l.status === "Inactive" ? "opacity-50" : ""}`}
-                    onClick={() => navigate(`/tcg/lenders/${l.id}`)}
-                  >
-                    <TableCell className="font-medium">{l.name}</TableCell>
-                    <TableCell>{l.dealerCount}</TableCell>
-                    <TableCell>{l.avgPortfolioScore?.toFixed(1) ?? "—"}</TableCell>
-                    <TableCell><Badge className="bg-green-600 hover:bg-green-600 text-white text-[10px]">{l.ragDistribution.Green}</Badge></TableCell>
-                    <TableCell><Badge className="bg-amber-500 hover:bg-amber-500 text-white text-[10px]">{l.ragDistribution.Amber}</Badge></TableCell>
-                    <TableCell><Badge className="bg-red-600 hover:bg-red-600 text-white text-[10px]">{l.ragDistribution.Red}</Badge></TableCell>
-                    <TableCell className="text-xs">{l.lastLogin ? format(new Date(l.lastLogin), "dd MMM yyyy HH:mm") : "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Button variant="outline" className="gap-2" onClick={() => toast({ title: "PDF export available in full MVP" })}>
-          <Download className="w-4 h-4" /> Download Platform PDF
-        </Button>
-      </div>
-
-      <Separator />
-
-      {/* Section B — Lender Activity Report */}
+      {/* Section A — Lender Activity Report */}
       <div>
         <h3 className="text-lg font-semibold mb-4">Lender Activity Report</h3>
 
@@ -196,6 +113,87 @@ const TCGReports = () => {
             <Download className="w-4 h-4" /> Download Lender Report
           </Button>
         )}
+      </div>
+
+      <Separator />
+
+      {/* Section B — Platform Summary */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Platform Summary Report</h3>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          {kpis.map(kpi => (
+            <Card
+              key={kpi.label}
+              className="cursor-pointer hover:border-accent transition-colors"
+              onClick={() => navigate(kpi.route)}
+            >
+              <CardContent className="pt-5 flex items-center gap-3">
+                <kpi.icon className="w-5 h-5 text-muted-foreground shrink-0" />
+                <div>
+                  <div className="text-2xl font-bold">{kpi.value}</div>
+                  <div className="text-[11px] text-muted-foreground">{kpi.label}</div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Card className="mb-6">
+          <CardHeader><CardTitle className="text-base">RAG Distribution by Lender</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={ragChartData} barCategoryGap="20%">
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="Green" stackId="a" fill="#16a34a" />
+                <Bar dataKey="Amber" stackId="a" fill="#f59e0b" />
+                <Bar dataKey="Red" stackId="a" fill="#dc2626" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardContent className="pt-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Lender</TableHead>
+                  <TableHead>Dealers</TableHead>
+                  <TableHead>Avg Score</TableHead>
+                  <TableHead>Green</TableHead>
+                  <TableHead>Amber</TableHead>
+                  <TableHead>Red</TableHead>
+                  <TableHead>Last Login</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lenders.map(l => (
+                  <TableRow
+                    key={l.id}
+                    className={`cursor-pointer hover:bg-muted/50 ${l.status === "Inactive" ? "opacity-50" : ""}`}
+                    onClick={() => navigate(`/tcg/lenders/${l.id}`)}
+                  >
+                    <TableCell className="font-medium">{l.name}</TableCell>
+                    <TableCell>{l.dealerCount}</TableCell>
+                    <TableCell>{l.avgPortfolioScore?.toFixed(1) ?? "—"}</TableCell>
+                    <TableCell><Badge className="bg-green-600 hover:bg-green-600 text-white text-[10px]">{l.ragDistribution.Green}</Badge></TableCell>
+                    <TableCell><Badge className="bg-amber-500 hover:bg-amber-500 text-white text-[10px]">{l.ragDistribution.Amber}</Badge></TableCell>
+                    <TableCell><Badge className="bg-red-600 hover:bg-red-600 text-white text-[10px]">{l.ragDistribution.Red}</Badge></TableCell>
+                    <TableCell className="text-xs">{l.lastLogin ? format(new Date(l.lastLogin), "dd MMM yyyy HH:mm") : "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Button variant="outline" className="gap-2" onClick={() => toast({ title: "PDF export available in full MVP" })}>
+          <Download className="w-4 h-4" /> Download Platform PDF
+        </Button>
       </div>
     </div>
   );
