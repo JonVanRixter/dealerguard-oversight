@@ -7,7 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle, ExternalLink, Layers, Building2, MapPin, User, Mail, Hash, Calendar, ShieldCheck, BarChart3 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  AlertTriangle, ExternalLink, Layers, Building2, MapPin, User, Mail, Hash,
+  Calendar, ShieldCheck, BarChart3, ClipboardCheck, Search, CheckCircle2,
+  ChevronDown, ChevronRight, Eye
+} from "lucide-react";
 import { format } from "date-fns";
 
 const ragColor: Record<string, string> = {
@@ -21,6 +26,7 @@ const DealerDetail = () => {
   const navigate = useNavigate();
   const dealer = dealers.find(d => d.id === id);
   const [internalNotes, setInternalNotes] = useState("");
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   const lender = dealer ? lenders.find(l => l.id === dealer.lenderId) : null;
 
@@ -37,6 +43,8 @@ const DealerDetail = () => {
     return <div className="text-center py-12 text-muted-foreground">Dealer not found.</div>;
   }
 
+  const ob = dealer.onboarding;
+
   return (
     <div className="space-y-6">
       {/* Manual Review Banner */}
@@ -45,7 +53,7 @@ const DealerDetail = () => {
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600" />
             <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
-              ⚠️ {pendingReviews.length} pending review item(s) for this dealer.
+              ⚠️ {pendingReviews.length} pending audit review item(s) for this dealer.
             </span>
           </div>
           <Button size="sm" variant="outline" onClick={() => navigate("/tcg/manual-review")} className="gap-1.5">
@@ -116,11 +124,67 @@ const DealerDetail = () => {
         </Card>
       )}
 
-      {/* Dealer Profile */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl">{dealer.name}</CardTitle>
+      {/* SECTION 1: Onboarding Record (collapsible) */}
+      <Collapsible open={onboardingOpen} onOpenChange={setOnboardingOpen}>
+        <div className="border rounded-lg">
+          <CollapsibleTrigger className="w-full">
+            <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition">
+              <div className="flex items-center gap-3">
+                <ClipboardCheck className="w-5 h-5 text-blue-600" />
+                <div className="text-left">
+                  <div className="text-sm font-semibold text-foreground">ONBOARDING RECORD</div>
+                  <div className="text-xs text-muted-foreground">
+                    Status: {ob.status} {ob.status === "Approved" && "✅"} · Approved by: {ob.approvedBy ?? "—"} · Date: {ob.approvedDate ? format(new Date(ob.approvedDate), "dd MMM yyyy") : "—"}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-[10px] gap-1"><Eye className="w-3 h-3" /> Oversight only</Badge>
+                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ob.status === "Approved" ? "bg-green-500/10 text-green-600" : "bg-amber-500/10 text-amber-600"}`}>
+                  {ob.status}
+                </span>
+                {onboardingOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-4 pb-4 space-y-2 border-t">
+              <div className="text-sm space-y-1 mt-3">
+                <div><span className="text-muted-foreground">Application Ref:</span> {ob.applicationRef}</div>
+                <div><span className="text-muted-foreground">Initiated by:</span> {ob.initiatedBy} on {format(new Date(ob.initiatedDate), "dd MMM yyyy")}</div>
+                {ob.submittedDate && <div><span className="text-muted-foreground">Submitted:</span> {format(new Date(ob.submittedDate), "dd MMM yyyy")}</div>}
+                {ob.approvedDate && <div><span className="text-muted-foreground">Approved:</span> {format(new Date(ob.approvedDate), "dd MMM yyyy")} by {ob.approvedBy}</div>}
+              </div>
+              <p className="text-xs text-muted-foreground italic">Onboarding details are read-only from TCG oversight. Full section results available in the lender portal.</p>
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+
+      {/* SECTION 2: Compliance Audit (expanded by default) */}
+      <div className="border rounded-lg">
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-3">
+            <Search className="w-5 h-5 text-[hsl(var(--sidebar-primary))]" />
+            <div>
+              <div className="text-sm font-semibold text-foreground">COMPLIANCE AUDIT</div>
+              <div className="text-xs text-muted-foreground">
+                Last audited: {format(new Date(dealer.lastAuditDate), "dd MMM yyyy")} · Overall Score: {dealer.latestScore}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-[hsl(var(--sidebar-primary))]/10 text-[hsl(var(--sidebar-primary))] hover:bg-[hsl(var(--sidebar-primary))]/10 text-[10px] gap-1">
+              <Search className="w-3 h-3" /> TCG Quality Assurance Active
+            </Badge>
+            <Badge className={ragColor[dealer.ragStatus]}>{dealer.ragStatus}</Badge>
+          </div>
+        </div>
+
+        {/* Dealer Profile inside audit section */}
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">{dealer.name}</h3>
             <div className="flex items-center gap-2">
               <Badge className={ragColor[dealer.ragStatus]}>{dealer.ragStatus}</Badge>
               <Badge variant={dealer.status === "Active" ? "default" : dealer.status === "Under Review" ? "destructive" : "secondary"}>
@@ -128,8 +192,7 @@ const DealerDetail = () => {
               </Badge>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div className="space-y-2">
               <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-muted-foreground" /> Trading as: {dealer.tradingAs}</div>
@@ -168,8 +231,8 @@ const DealerDetail = () => {
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* TCG Internal Notes */}
       <Card>

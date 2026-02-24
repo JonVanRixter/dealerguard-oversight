@@ -1,11 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { lenders, dealers, manualReviewQueue, auditTrail } from "@/data/tcg";
+import { onboardingApplications } from "@/data/tcg/onboardingApplications";
 import {
   Building2, Store, AlertTriangle, Activity, Clock, ArrowRight,
-  TrendingUp, TrendingDown, ChevronRight, Users
+  TrendingUp, TrendingDown, ChevronRight, Users, ClipboardCheck, Eye, Search
 } from "lucide-react";
 import { format, isPast, parseISO } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 const TCGDashboard = () => {
   const { impersonationMode, impersonatedLender } = useImpersonation();
@@ -30,6 +32,20 @@ const TCGDashboard = () => {
 
   const recentAudit = [...auditTrail].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 8);
   const topReviews = [...pendingReviews].sort((a, b) => new Date(a.slaDeadline).getTime() - new Date(b.slaDeadline).getTime()).slice(0, 5);
+
+  // Onboarding activity per lender
+  const onboardingByLender = activeLenders.map(l => {
+    const apps = onboardingApplications.filter(a => a.lenderId === l.id);
+    const lenderDealers = dealers.filter(d => d.lenderId === l.id && d.onboarding.status === "Approved");
+    return {
+      lender: l.name,
+      lenderId: l.id,
+      inProgress: apps.filter(a => a.status === "In Progress").length,
+      pendingApproval: apps.filter(a => a.status === "Pending Approval").length,
+      approved: lenderDealers.length,
+      rejected: apps.filter(a => a.status === "Rejected").length,
+    };
+  });
 
   const stats = [
     { label: "Active Lenders", value: activeLenders.length, icon: Building2, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -68,30 +84,9 @@ const TCGDashboard = () => {
         <h3 className="text-sm font-semibold text-foreground mb-3">Platform RAG Distribution</h3>
         <div className="flex items-center gap-3 mb-2">
           <div className="flex-1 h-6 rounded-full overflow-hidden flex bg-muted">
-            {ragTotals.Green > 0 && (
-              <div
-                className="bg-emerald-500 h-full flex items-center justify-center text-[10px] font-bold text-white"
-                style={{ width: `${(ragTotals.Green / totalDealers) * 100}%` }}
-              >
-                {ragTotals.Green}
-              </div>
-            )}
-            {ragTotals.Amber > 0 && (
-              <div
-                className="bg-amber-500 h-full flex items-center justify-center text-[10px] font-bold text-white"
-                style={{ width: `${(ragTotals.Amber / totalDealers) * 100}%` }}
-              >
-                {ragTotals.Amber}
-              </div>
-            )}
-            {ragTotals.Red > 0 && (
-              <div
-                className="bg-red-500 h-full flex items-center justify-center text-[10px] font-bold text-white"
-                style={{ width: `${(ragTotals.Red / totalDealers) * 100}%` }}
-              >
-                {ragTotals.Red}
-              </div>
-            )}
+            {ragTotals.Green > 0 && <div className="bg-emerald-500 h-full flex items-center justify-center text-[10px] font-bold text-white" style={{ width: `${(ragTotals.Green / totalDealers) * 100}%` }}>{ragTotals.Green}</div>}
+            {ragTotals.Amber > 0 && <div className="bg-amber-500 h-full flex items-center justify-center text-[10px] font-bold text-white" style={{ width: `${(ragTotals.Amber / totalDealers) * 100}%` }}>{ragTotals.Amber}</div>}
+            {ragTotals.Red > 0 && <div className="bg-red-500 h-full flex items-center justify-center text-[10px] font-bold text-white" style={{ width: `${(ragTotals.Red / totalDealers) * 100}%` }}>{ragTotals.Red}</div>}
           </div>
         </div>
         <div className="flex gap-4 text-xs text-muted-foreground">
@@ -106,10 +101,7 @@ const TCGDashboard = () => {
         <div className="bg-card rounded-lg border border-border p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-foreground">Lender Activity</h3>
-            <button
-              onClick={() => navigate("/tcg/lenders")}
-              className="text-xs text-accent hover:underline flex items-center gap-1"
-            >
+            <button onClick={() => navigate("/tcg/lenders")} className="text-xs text-accent hover:underline flex items-center gap-1">
               View All <ChevronRight className="w-3 h-3" />
             </button>
           </div>
@@ -125,11 +117,7 @@ const TCGDashboard = () => {
               </thead>
               <tbody>
                 {lenders.map(l => (
-                  <tr
-                    key={l.id}
-                    onClick={() => navigate(`/tcg/lenders/${l.id}`)}
-                    className="border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer transition"
-                  >
+                  <tr key={l.id} onClick={() => navigate(`/tcg/lenders/${l.id}`)} className="border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer transition">
                     <td className="py-2.5 font-medium text-foreground">{l.name}</td>
                     <td className="py-2.5 text-center">{l.dealerCount}</td>
                     <td className="py-2.5 text-center">{l.avgPortfolioScore ?? "—"}</td>
@@ -145,17 +133,17 @@ const TCGDashboard = () => {
           </div>
         </div>
 
-        {/* Manual Review Queue */}
+        {/* Manual Review Queue — Audit Oversight */}
         <div className="bg-card rounded-lg border border-border p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-foreground">Manual Review Queue</h3>
-            <button
-              onClick={() => navigate("/tcg/manual-review")}
-              className="text-xs text-accent hover:underline flex items-center gap-1"
-            >
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Search className="w-4 h-4 text-[hsl(var(--sidebar-primary))]" /> Audit Review Queue
+            </h3>
+            <button onClick={() => navigate("/tcg/manual-review")} className="text-xs text-accent hover:underline flex items-center gap-1">
               View Full Queue <ChevronRight className="w-3 h-3" />
             </button>
           </div>
+          <p className="text-[11px] text-muted-foreground mb-3">These items require TCG review before the lender's audit scores are finalised.</p>
           {topReviews.length === 0 ? (
             <p className="text-sm text-muted-foreground">No pending reviews</p>
           ) : (
@@ -170,9 +158,12 @@ const TCGDashboard = () => {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-sm text-foreground">{r.dealerName}</span>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${overdue ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600"}`}>
-                        {overdue ? "OVERDUE" : format(parseISO(r.slaDeadline), "dd MMM HH:mm")}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/10 text-[10px]">Audit Review</Badge>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${overdue ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600"}`}>
+                          {overdue ? "OVERDUE" : format(parseISO(r.slaDeadline), "dd MMM HH:mm")}
+                        </span>
+                      </div>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">{r.lenderName} · {r.checkName} — {r.reason.slice(0, 80)}…</div>
                     <div className="flex items-center gap-2 mt-1.5">
@@ -189,14 +180,48 @@ const TCGDashboard = () => {
         </div>
       </div>
 
+      {/* Onboarding Activity — Read-only oversight */}
+      <div className="bg-card rounded-lg border border-border p-5">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <ClipboardCheck className="w-4 h-4 text-blue-600" /> Onboarding Activity
+            <Badge variant="outline" className="text-[10px] gap-1"><Eye className="w-3 h-3" /> Oversight only</Badge>
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-muted-foreground border-b border-border">
+                <th className="pb-2 font-medium">Lender</th>
+                <th className="pb-2 font-medium text-center">In Progress</th>
+                <th className="pb-2 font-medium text-center">Pending Approval</th>
+                <th className="pb-2 font-medium text-center">Approved</th>
+                <th className="pb-2 font-medium text-center">Rejected</th>
+              </tr>
+            </thead>
+            <tbody>
+              {onboardingByLender.map(row => (
+                <tr key={row.lenderId} className="border-b border-border last:border-0">
+                  <td className="py-2.5 font-medium text-foreground">{row.lender}</td>
+                  <td className="py-2.5 text-center">{row.inProgress > 0 ? <span className="text-blue-600 font-semibold">{row.inProgress}</span> : "0"}</td>
+                  <td className="py-2.5 text-center">{row.pendingApproval > 0 ? <span className="text-amber-600 font-semibold">{row.pendingApproval}</span> : "0"}</td>
+                  <td className="py-2.5 text-center">{row.approved}</td>
+                  <td className="py-2.5 text-center">{row.rejected}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+          <ClipboardCheck className="w-3 h-3" /> Dealer onboarding is managed entirely by the lender. TCG oversight is read-only.
+        </p>
+      </div>
+
       {/* Recent Activity */}
       <div className="bg-card rounded-lg border border-border p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
-          <button
-            onClick={() => navigate("/tcg/audit-trail")}
-            className="text-xs text-accent hover:underline flex items-center gap-1"
-          >
+          <button onClick={() => navigate("/tcg/audit-trail")} className="text-xs text-accent hover:underline flex items-center gap-1">
             Full Audit Trail <ChevronRight className="w-3 h-3" />
           </button>
         </div>
