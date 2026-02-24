@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import {
   ArrowUpDown, Clock, FileText, Upload, CheckCircle2, XCircle, MessageSquare,
-  AlertTriangle, BarChart3, ShieldCheck,
+  AlertTriangle, BarChart3, ShieldCheck, Search, Info,
 } from "lucide-react";
 import { format, formatDistanceToNow, differenceInHours, isPast } from "date-fns";
 
@@ -136,8 +136,12 @@ const TCGManualReview = () => {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-foreground mb-1">Manual Review Queue</h2>
-        <p className="text-muted-foreground">Compliance exceptions requiring TCG investigation.</p>
+        <h2 className="text-2xl font-bold text-foreground mb-1 flex items-center gap-2">
+          <Search className="w-6 h-6 text-[hsl(var(--sidebar-primary))]" /> Audit Review Queue
+        </h2>
+        <p className="text-muted-foreground text-sm">
+          The audit review queue contains compliance sections submitted by lenders that require TCG quality assurance before scores can be confirmed. Lender onboarding decisions are not managed here.
+        </p>
       </div>
 
       {/* Filters */}
@@ -167,6 +171,7 @@ const TCGManualReview = () => {
             <TableRow>
               <TableHead><SortHeader label="Dealer" col="dealerName" /></TableHead>
               <TableHead>Lender</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Check</TableHead>
               <TableHead>Reason</TableHead>
               <TableHead><SortHeader label="Status" col="status" /></TableHead>
@@ -182,6 +187,7 @@ const TCGManualReview = () => {
                 <TableRow key={item.id} className="cursor-pointer" onClick={() => openItem(item)}>
                   <TableCell className="font-medium">{item.dealerName}</TableCell>
                   <TableCell className="text-xs">{item.lenderName}</TableCell>
+                  <TableCell><Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/10 text-[10px]">Audit Review</Badge></TableCell>
                   <TableCell>{item.checkName}</TableCell>
                   <TableCell className="max-w-[200px] truncate text-muted-foreground text-xs" title={item.reason}>
                     {item.reason.length > 80 ? item.reason.slice(0, 80) + "…" : item.reason}
@@ -228,6 +234,16 @@ const TCGManualReview = () => {
               </DialogTitle>
               <DialogDescription>Review exception and take action.</DialogDescription>
             </DialogHeader>
+
+            {/* Audit Review Banner */}
+            <div className="bg-[hsl(var(--sidebar-primary))]/10 border border-[hsl(var(--sidebar-primary))]/30 rounded-lg p-3 text-sm space-y-1">
+              <div className="font-semibold flex items-center gap-1.5 text-foreground">
+                <Search className="w-4 h-4 text-[hsl(var(--sidebar-primary))]" /> AUDIT REVIEW — TCG Action Required
+              </div>
+              <p className="text-muted-foreground text-xs">
+                The lender has updated this compliance section. Your decision here will finalise the section score and update the dealer's overall RAG status.
+              </p>
+            </div>
 
             <div className="space-y-5 py-2">
               {/* Section 1: Dealer Summary */}

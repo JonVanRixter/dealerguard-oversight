@@ -8,9 +8,16 @@ import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import Login from "./pages/Login";
-import LenderDashboard from "./pages/LenderDashboard";
 import NotFound from "./pages/NotFound";
 
+// Lender Portal
+import LenderLayout from "./layouts/LenderLayout";
+import LenderDashboard from "./pages/LenderDashboard";
+import LenderDealers from "./pages/lender/Dealers";
+import LenderOnboarding from "./pages/lender/Onboarding";
+import LenderDocuments from "./pages/lender/Documents";
+
+// TCG Oversight
 import TCGLayout from "./layouts/TCGLayout";
 import TCGDashboard from "./pages/tcg/Dashboard";
 import TCGLenders from "./pages/tcg/Lenders";
@@ -38,7 +45,12 @@ const App = () => (
               <Route path="/login" element={<Login />} />
 
               {/* Lender routes */}
-              <Route path="/dashboard" element={<ProtectedRoute requiredRole="lender"><LenderDashboard /></ProtectedRoute>} />
+              <Route element={<ProtectedRoute requiredRole="lender"><LenderLayout /></ProtectedRoute>}>
+                <Route path="/dashboard" element={<LenderDashboard />} />
+                <Route path="/dealers" element={<LenderDealers />} />
+                <Route path="/onboarding" element={<LenderOnboarding />} />
+                <Route path="/documents" element={<LenderDocuments />} />
+              </Route>
 
               {/* TCG routes */}
               <Route path="/tcg" element={<ProtectedRoute requiredRole="tcg_ops"><TCGLayout /></ProtectedRoute>}>
