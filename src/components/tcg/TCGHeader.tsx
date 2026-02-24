@@ -33,29 +33,8 @@ const TCGHeader = () => {
         </div>
       </div>
 
-      {/* Centre: Lender Filter */}
-      <div className="relative">
-        <button
-          onClick={() => setShowLenderDropdown(!showLenderDropdown)}
-          className="flex items-center gap-2 px-4 py-1.5 rounded-md bg-primary-foreground/10 hover:bg-primary-foreground/20 transition text-sm font-medium"
-        >
-          {selectedLender}
-          <ChevronDown className="w-4 h-4" />
-        </button>
-        {showLenderDropdown && (
-          <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 bg-card text-card-foreground rounded-md shadow-xl border border-border min-w-[200px] py-1 z-50">
-            {LENDERS.map(l => (
-              <button
-                key={l}
-                onClick={() => handleLenderSelect(l)}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-muted transition ${l === selectedLender ? "bg-muted font-semibold" : ""}`}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Centre spacer */}
+      <div />
 
       {/* Right: Notifications + Profile */}
       <div className="flex items-center gap-4">
