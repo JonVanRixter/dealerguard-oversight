@@ -165,7 +165,8 @@ const TCGDashboard = () => {
                 return (
                   <div
                     key={r.id}
-                    className={`p-3 rounded-md border ${overdue ? "border-destructive/40 bg-destructive/5" : "border-border"}`}
+                    onClick={() => navigate("/tcg/manual-review")}
+                    className={`p-3 rounded-md border cursor-pointer hover:ring-1 hover:ring-accent/50 transition ${overdue ? "border-destructive/40 bg-destructive/5" : "border-border"}`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-sm text-foreground">{r.dealerName}</span>
@@ -173,7 +174,7 @@ const TCGDashboard = () => {
                         {overdue ? "OVERDUE" : format(parseISO(r.slaDeadline), "dd MMM HH:mm")}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">{r.checkName} — {r.reason.slice(0, 80)}…</div>
+                    <div className="text-xs text-muted-foreground mt-1">{r.lenderName} · {r.checkName} — {r.reason.slice(0, 80)}…</div>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${r.priority === "High" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
                         {r.priority}
