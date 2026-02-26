@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -59,6 +58,83 @@ function FieldRow({ label, value }: { label: string; value: unknown }) {
   );
 }
 
+/* ── Mock enrichment data keyed by dealer name fragment ── */
+function getMockEnrichment(dealerName: string, companyNumber?: string): { enriched: EnrichmentResult; screeningMap: Record<string, string> } {
+  const lower = dealerName.toLowerCase();
+
+  const enriched: EnrichmentResult = {
+    business_info: {
+      registered_name: dealerName.includes("Ltd") ? dealerName : `${dealerName} Ltd`,
+      trading_names: dealerName.replace(/ Ltd$/i, ""),
+      registered_address: lower.includes("hartley") ? "Hartley Road, Wakefield, WF1 3LX" :
+        lower.includes("birchwood") ? "Birchwood Lane, Stockport, SK4 2PL" :
+          "Unit 12, Enterprise Way, Leeds, LS10 1AG",
+      trading_address: lower.includes("hartley") ? "Hartley Road, Wakefield, WF1 3LX" :
+        lower.includes("birchwood") ? "Birchwood Lane, Stockport, SK4 2PL" :
+          "Unit 12, Enterprise Way, Leeds, LS10 1AG",
+      company_number: companyNumber || (lower.includes("hartley") ? "09876543" : lower.includes("birchwood") ? "12345890" : "11234567"),
+      fca_frn: lower.includes("hartley") ? "812345" : lower.includes("birchwood") ? "798234" : "654321",
+      fca_permissions_summary: "Credit broking; Debt adjusting; Arranging deals in investments",
+      vat_number: `GB ${Math.floor(100000000 + Math.random() * 900000000)}`,
+      incorporation_date: "2017-04-12",
+      sic_codes: "45111 — Sale of cars and light motor vehicles",
+    },
+    financial_info: {
+      credit_score: lower.includes("apex") ? "31 / 100" : lower.includes("birchwood") ? "54 / 100" : "72 / 100",
+      risk_band: lower.includes("apex") ? "High Risk" : lower.includes("birchwood") ? "Medium Risk" : "Low Risk",
+      credit_limit: lower.includes("apex") ? "£50,000" : lower.includes("birchwood") ? "£120,000" : "£250,000",
+      average_payment_behaviour_dbt: lower.includes("apex") ? "45 days" : lower.includes("birchwood") ? "28 days" : "12 days",
+      last_3_years_accounts: [
+        { year: "2025-03-31", turnover: "£4,200,000", profit: "£310,000", assets: "£1,800,000", liabilities: "£950,000" },
+        { year: "2024-03-31", turnover: "£3,850,000", profit: "£275,000", assets: "£1,650,000", liabilities: "£870,000" },
+        { year: "2023-03-31", turnover: "£3,400,000", profit: "£240,000", assets: "£1,500,000", liabilities: "£800,000" },
+      ] as any,
+    },
+    directors_and_shareholders: {
+      active_directors: lower.includes("hartley") ? [
+        { name: "James Hartley", role: "Director", appointed_on: "2017-04-12", dob: "3/1982", nationality: "British" },
+        { name: "Claire Hartley", role: "Director", appointed_on: "2017-04-12", dob: "7/1985", nationality: "British" },
+        { name: "David Pearson", role: "Company Secretary", appointed_on: "2019-01-15", dob: "11/1978", nationality: "British" },
+      ] : lower.includes("birchwood") ? [
+        { name: "Mark Davies", role: "Director", appointed_on: "2018-06-01", dob: "5/1980", nationality: "British" },
+        { name: "Rebecca Lowe", role: "Director", appointed_on: "2020-02-14", dob: "9/1987", nationality: "British" },
+      ] : [
+        { name: "Derek T. Horne", role: "Director", appointed_on: "2016-11-30", dob: "1/1975", nationality: "British" },
+      ],
+      persons_of_significant_control: [
+        { name: lower.includes("hartley") ? "James Hartley" : lower.includes("birchwood") ? "Mark Davies" : "Derek T. Horne", natures_of_control: ["ownership-of-shares-75-to-100-percent"], notified_on: "2017-04-12" },
+      ],
+    },
+    supporting_docs: {
+      fca_authorisation_link: `https://register.fca.org.uk/s/firm?id=${lower.includes("hartley") ? "812345" : lower.includes("birchwood") ? "798234" : "654321"}`,
+      companies_house_profile_link: `https://find-and-update.company-information.service.gov.uk/company/${companyNumber || "09876543"}`,
+      filing_history_link: `https://find-and-update.company-information.service.gov.uk/company/${companyNumber || "09876543"}/filing-history`,
+    },
+    missing_fields: [],
+  };
+
+  // Intentionally leave some fields missing for realism
+  if (!lower.includes("hartley")) {
+    enriched.business_info.vat_number = NOT_FOUND;
+    enriched.missing_fields.push("business_info.vat_number");
+  }
+
+  const screeningMap: Record<string, string> = {
+    companyName: enriched.business_info.registered_name,
+    registeredAddress: enriched.business_info.registered_address,
+    companyRegNo: enriched.business_info.company_number,
+    companyStatus: "Active",
+    fcaFrn: `FRN: ${enriched.business_info.fca_frn} — Authorised`,
+    fcaPermissions: "Credit broking, Debt adjusting, Arranging deals",
+    creditScore: enriched.financial_info.credit_score as string,
+    fcaIndividuals: Array.isArray(enriched.directors_and_shareholders.active_directors)
+      ? enriched.directors_and_shareholders.active_directors.map((d: any) => d.name).join(", ")
+      : "",
+  };
+
+  return { enriched, screeningMap };
+}
+
 export function DealerEnrichment({ dealerName, companyNumber, autoTrigger = false, onEnriched }: Props) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -94,197 +170,31 @@ export function DealerEnrichment({ dealerName, companyNumber, autoTrigger = fals
     setProgress(0);
     setResult(null);
 
-    const enriched: EnrichmentResult = {
-      business_info: {
-        registered_name: NOT_FOUND, trading_names: NOT_FOUND, registered_address: NOT_FOUND,
-        trading_address: NOT_FOUND, company_number: companyNumber || NOT_FOUND,
-        fca_frn: NOT_FOUND, fca_permissions_summary: NOT_FOUND, vat_number: NOT_FOUND,
-        incorporation_date: NOT_FOUND, sic_codes: NOT_FOUND,
-      },
-      financial_info: {
-        credit_score: NOT_FOUND, risk_band: NOT_FOUND, credit_limit: NOT_FOUND,
-        average_payment_behaviour_dbt: NOT_FOUND, last_3_years_accounts: NOT_FOUND,
-      },
-      directors_and_shareholders: {
-        active_directors: NOT_FOUND, persons_of_significant_control: NOT_FOUND,
-      },
-      supporting_docs: {
-        fca_authorisation_link: NOT_FOUND, companies_house_profile_link: NOT_FOUND,
-        filing_history_link: NOT_FOUND,
-      },
-      missing_fields: [],
-    };
+    const steps = [
+      { label: "Searching Companies House…", pct: 15 },
+      { label: "Fetching company profile…", pct: 30 },
+      { label: "Retrieving officers & PSCs…", pct: 45 },
+      { label: "Searching FCA Register…", pct: 60 },
+      { label: "Fetching FCA permissions…", pct: 70 },
+      { label: "Fetching CreditSafe data…", pct: 80 },
+      { label: "Compiling credit report…", pct: 90 },
+      { label: "Computing results…", pct: 95 },
+    ];
 
-    const screeningMap: Record<string, string> = {};
-
-    try {
-      // 1. Companies House
-      setProgressLabel("Searching Companies House…");
-      setProgress(10);
-      let chCompanyNumber = companyNumber || "";
-
-      if (!chCompanyNumber) {
-        try {
-          const { data } = await supabase.functions.invoke("companies-house", {
-            body: { action: "search", query: dealerName },
-          });
-          const items = data?.items || [];
-          if (items.length > 0) {
-            chCompanyNumber = items[0].company_number || "";
-            enriched.business_info.company_number = chCompanyNumber;
-          }
-        } catch (e) { console.warn("CH search failed:", e); }
-      }
-
-      if (chCompanyNumber) {
-        setProgress(20);
-        try {
-          const { data: profile } = await supabase.functions.invoke("companies-house", {
-            body: { action: "profile", companyNumber: chCompanyNumber },
-          });
-          if (profile && profile.status !== "not_found") {
-            enriched.business_info.registered_name = profile.company_name || NOT_FOUND;
-            screeningMap.companyName = profile.company_name || "";
-            if (profile.registered_office_address) {
-              const a = profile.registered_office_address;
-              const addr = [a.address_line_1, a.address_line_2, a.locality, a.region, a.postal_code, a.country].filter(Boolean).join(", ");
-              enriched.business_info.registered_address = addr || NOT_FOUND;
-              screeningMap.registeredAddress = addr;
-            }
-            enriched.business_info.incorporation_date = profile.date_of_creation || NOT_FOUND;
-            enriched.business_info.company_number = chCompanyNumber;
-            screeningMap.companyRegNo = chCompanyNumber;
-            screeningMap.companyStatus = profile.company_status || "";
-            if (profile.sic_codes?.length > 0) enriched.business_info.sic_codes = profile.sic_codes.join(", ");
-            enriched.supporting_docs.companies_house_profile_link = `https://find-and-update.company-information.service.gov.uk/company/${chCompanyNumber}`;
-            enriched.supporting_docs.filing_history_link = `https://find-and-update.company-information.service.gov.uk/company/${chCompanyNumber}/filing-history`;
-          }
-        } catch (e) { console.warn("CH profile failed:", e); }
-
-        setProgress(35);
-        try {
-          const { data: officers } = await supabase.functions.invoke("companies-house", {
-            body: { action: "officers", companyNumber: chCompanyNumber },
-          });
-          const items = officers?.items || [];
-          const active = items.filter((o: any) => !o.resigned_on);
-          if (active.length > 0) {
-            enriched.directors_and_shareholders.active_directors = active.map((o: any) => ({
-              name: o.name, role: o.officer_role, appointed_on: o.appointed_on || NOT_FOUND,
-              dob: o.date_of_birth ? `${o.date_of_birth.month}/${o.date_of_birth.year}` : NOT_FOUND,
-              nationality: o.nationality || NOT_FOUND,
-            }));
-            screeningMap.fcaIndividuals = active.slice(0, 3).map((o: any) => o.name).join(", ") + (active.length > 3 ? ` (+${active.length - 3} more)` : "");
-          }
-        } catch (e) { console.warn("CH officers failed:", e); }
-
-        setProgress(45);
-        try {
-          const { data: pscs } = await supabase.functions.invoke("companies-house", {
-            body: { action: "pscs", companyNumber: chCompanyNumber },
-          });
-          const items = pscs?.items || [];
-          if (items.length > 0) {
-            enriched.directors_and_shareholders.persons_of_significant_control = items.map((p: any) => ({
-              name: p.name || NOT_FOUND, natures_of_control: p.natures_of_control || [], notified_on: p.notified_on || NOT_FOUND,
-            }));
-          }
-        } catch (e) { console.warn("CH PSCs failed:", e); }
-      }
-
-      // 2. FCA Register
-      setProgressLabel("Searching FCA Register…");
-      setProgress(55);
-      try {
-        const { data: fcaSearch } = await supabase.functions.invoke("fca-register", {
-          body: { action: "search", query: dealerName, type: "firm" },
-        });
-        const fcaResults = fcaSearch?.Data || [];
-        if (fcaResults.length > 0) {
-          const frn = fcaResults[0]["FRN"] || fcaResults[0]["Firm Reference Number"];
-          if (frn) {
-            const { data: firmDetail } = await supabase.functions.invoke("fca-register", { body: { action: "firm", frn } });
-            const firm = firmDetail?.Data?.[0] || firmDetail;
-            if (firm && firm.Status !== "Not Found") {
-              enriched.business_info.fca_frn = frn;
-              screeningMap.fcaFrn = `FRN: ${frn} — ${firm["Current Status"] || "Unknown"}`;
-              enriched.supporting_docs.fca_authorisation_link = `https://register.fca.org.uk/s/firm?id=${frn}`;
-            }
-            setProgress(65);
-            const { data: permResult } = await supabase.functions.invoke("fca-register", { body: { action: "firm-permissions", frn } });
-            const perms = permResult?.Data || [];
-            if (perms.length > 0) {
-              const permNames = perms.map((p: any) => p["Permission"] || p["Regulated Activity"] || "Unknown");
-              enriched.business_info.fca_permissions_summary = permNames.slice(0, 5).join("; ") + (permNames.length > 5 ? ` (+${permNames.length - 5} more)` : "");
-              screeningMap.fcaPermissions = permNames.slice(0, 3).join(", ");
-            }
-          }
-        }
-      } catch (e) { console.warn("FCA search failed:", e); }
-
-      // 3. CreditSafe
-      setProgressLabel("Fetching CreditSafe data…");
-      setProgress(75);
-      try {
-        const csBody: Record<string, string> = { action: "search", country: "GB" };
-        if (chCompanyNumber) csBody.regNo = chCompanyNumber;
-        else csBody.name = dealerName;
-        const { data: csSearch } = await supabase.functions.invoke("creditsafe", { body: csBody });
-        const companies = csSearch?.companies || [];
-        if (companies.length > 0) {
-          setProgress(85);
-          const { data: csReport } = await supabase.functions.invoke("creditsafe", { body: { action: "report", connectId: companies[0].id } });
-          if (csReport?.report) {
-            const report = csReport.report;
-            const cr = report.creditScore?.currentCreditRating;
-            const scoreVal = cr?.providerValue?.value;
-            const scoreNum = scoreVal ? parseInt(scoreVal) : 0;
-            enriched.financial_info.credit_score = scoreVal ? `${scoreVal} / ${cr?.providerValue?.maxValue || "100"}` : NOT_FOUND;
-            enriched.financial_info.risk_band = scoreVal ? (scoreNum >= 71 ? "Low Risk" : scoreNum >= 40 ? "Medium Risk" : "High Risk") : NOT_FOUND;
-            enriched.financial_info.credit_limit = cr?.creditLimit?.value ? `£${cr.creditLimit.value.toLocaleString()}` : NOT_FOUND;
-            enriched.financial_info.average_payment_behaviour_dbt = report.paymentData?.dbt !== undefined ? `${report.paymentData.dbt} days` : NOT_FOUND;
-            if (scoreVal) screeningMap.creditScore = `${scoreVal}/${cr?.providerValue?.maxValue || "100"} (${enriched.financial_info.risk_band})`;
-            if (report.companySummary?.businessName) enriched.business_info.trading_names = report.companySummary.businessName;
-            const accounts = report.financialStatements || [];
-            if (accounts.length > 0) {
-              enriched.financial_info.last_3_years_accounts = accounts.slice(0, 3).map((a: any) => ({
-                year: a.yearEndDate || "N/A",
-                turnover: a.profitAndLoss?.revenue ?? a.profitAndLoss?.turnover ?? "N/A",
-                profit: a.profitAndLoss?.profitLoss ?? a.profitAndLoss?.operatingProfit ?? "N/A",
-                assets: a.balanceSheet?.totalAssets ?? "N/A",
-                liabilities: a.balanceSheet?.totalLiabilities ?? "N/A",
-              })) as any;
-            }
-          }
-        }
-      } catch (e) { console.warn("CreditSafe failed:", e); }
-
-      // 4. Compute missing fields
-      setProgress(95);
-      setProgressLabel("Computing results…");
-      const missing: string[] = [];
-      const checkMissing = (section: string, obj: Record<string, unknown>) => {
-        for (const [key, val] of Object.entries(obj)) {
-          if (fieldDisplay(val) === NOT_FOUND) missing.push(`${section}.${key}`);
-        }
-      };
-      checkMissing("business_info", enriched.business_info);
-      checkMissing("financial_info", enriched.financial_info);
-      checkMissing("directors_and_shareholders", enriched.directors_and_shareholders);
-      checkMissing("supporting_docs", enriched.supporting_docs);
-      enriched.missing_fields = missing;
-
-      setResult(enriched);
-      onEnriched?.(enriched, screeningMap);
-      setProgress(100);
-      setProgressLabel("Complete");
-      toast({ title: "Enrichment Complete", description: `${missing.length} field(s) marked as MISSING.` });
-    } catch (e) {
-      console.error("Enrichment error:", e);
-      toast({ title: "Enrichment Failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
-    } finally {
-      setLoading(false);
+    for (const step of steps) {
+      setProgressLabel(step.label);
+      setProgress(step.pct);
+      await new Promise(r => setTimeout(r, 300 + Math.random() * 200));
     }
+
+    const { enriched, screeningMap } = getMockEnrichment(dealerName, companyNumber);
+
+    setResult(enriched);
+    onEnriched?.(enriched, screeningMap);
+    setProgress(100);
+    setProgressLabel("Complete");
+    toast({ title: "Enrichment Complete", description: `${enriched.missing_fields.length} field(s) marked as MISSING.` });
+    setLoading(false);
   }, [dealerName, companyNumber, onEnriched, toast]);
 
   const copyJson = () => {
