@@ -49,8 +49,8 @@ const App = () => (
               <Route element={<ProtectedRoute requiredRole="lender"><LenderLayout /></ProtectedRoute>}>
                 <Route path="/dashboard" element={<LenderDashboard />} />
                 <Route path="/dealers" element={<LenderDealers />} />
-                <Route path="/pre-onboarding" element={<LenderPreOnboarding />} />
-                <Route path="/onboarding" element={<LenderOnboarding />} />
+                <Route path="/dealers/pre-onboarding" element={<LenderPreOnboarding />} />
+                <Route path="/dealers/onboarding" element={<LenderOnboarding />} />
                 <Route path="/documents" element={<LenderDocuments />} />
               </Route>
 

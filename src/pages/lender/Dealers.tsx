@@ -23,7 +23,7 @@ const LenderDealers = () => {
       </div>
       <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
         <span className="font-medium text-foreground">Active Portfolio</span> — These dealers have completed onboarding and are approved in your portfolio. To add a new dealer, go to{" "}
-        <Link to="/onboarding" className="text-blue-600 hover:underline inline-flex items-center gap-1">
+        <Link to="/dealers/onboarding" className="text-blue-600 hover:underline inline-flex items-center gap-1">
           <ClipboardCheck className="w-3.5 h-3.5" /> Onboarding →
         </Link>
       </div>
