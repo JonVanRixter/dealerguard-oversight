@@ -3,13 +3,13 @@ import { LayoutDashboard, Store, ClipboardCheck, FileText, FileSearch, FolderOpe
 
 const MAIN_ITEMS = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "Dealers", to: "/dealers", icon: Store },
   { label: "Documents", to: "/documents", icon: FileText },
 ];
 
-const ONBOARDING_ITEMS = [
-  { label: "Pre-Onboarding", to: "/pre-onboarding", icon: FileSearch },
-  { label: "Onboarding", to: "/onboarding", icon: ClipboardCheck },
+const DEALER_ITEMS = [
+  { label: "Portfolio", to: "/dealers", icon: Store, exact: true },
+  { label: "Pre-Onboarding", to: "/dealers/pre-onboarding", icon: FileSearch },
+  { label: "Onboarding", to: "/dealers/onboarding", icon: ClipboardCheck },
 ];
 
 const LenderSidebar = () => {
@@ -37,14 +37,14 @@ const LenderSidebar = () => {
           </NavLink>
         ))}
 
-        {/* Onboarding section — visually grouped */}
+        {/* Dealers & Onboarding — dealer-centric group */}
         <div className="pt-4 pb-1 px-1">
           <div className="flex items-center gap-2 mb-2">
             <FolderOpen className="w-3.5 h-3.5 text-primary" />
-            <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Dealer Onboarding</span>
+            <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Dealers</span>
           </div>
           <div className="ml-1 border-l-2 border-primary/20 pl-2 space-y-0.5">
-            {ONBOARDING_ITEMS.map(item => (
+            {DEALER_ITEMS.map(item => (
               <NavLink key={item.to} to={item.to} className={linkClass(item.to)}>
                 <item.icon className="w-4 h-4 shrink-0" />
                 {item.label}

@@ -188,7 +188,7 @@ function PreScreeningChecks({ dealerName, companyNumber, setCompanyNumber, onPas
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
                 <div className="text-sm">
                   <p className="font-medium text-emerald-700 dark:text-emerald-400">All checks passed</p>
-                  <Button onClick={() => { onPass(); navigate("/onboarding"); }} className="mt-3 gap-2"><ArrowRight className="w-4 h-4" /> Proceed to Onboarding</Button>
+                  <Button onClick={() => { onPass(); navigate("/dealers/onboarding"); }} className="mt-3 gap-2"><ArrowRight className="w-4 h-4" /> Proceed to Onboarding</Button>
                 </div>
               </>
             ) : (
@@ -225,7 +225,7 @@ export default function PreOnboarding() {
     if (!newApp.dealerName.trim()) return;
     setNewAppOpen(false);
     toast({ title: "Application Submitted", description: `Application submitted for ${newApp.dealerName}.` });
-    navigate("/onboarding");
+    navigate("/dealers/onboarding");
     setNewApp({ dealerName: "", tradingName: "", fcaRef: "", companyNumber: "", contactEmail: "", contactPhone: "" });
   };
 
