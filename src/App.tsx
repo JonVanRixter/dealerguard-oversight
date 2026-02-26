@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import LenderLayout from "./layouts/LenderLayout";
 import LenderDashboard from "./pages/LenderDashboard";
 import LenderDealers from "./pages/lender/Dealers";
+import LenderPreOnboarding from "./pages/lender/PreOnboarding";
 import LenderOnboarding from "./pages/lender/Onboarding";
 import LenderDocuments from "./pages/lender/Documents";
 
@@ -48,6 +49,7 @@ const App = () => (
               <Route element={<ProtectedRoute requiredRole="lender"><LenderLayout /></ProtectedRoute>}>
                 <Route path="/dashboard" element={<LenderDashboard />} />
                 <Route path="/dealers" element={<LenderDealers />} />
+                <Route path="/pre-onboarding" element={<LenderPreOnboarding />} />
                 <Route path="/onboarding" element={<LenderOnboarding />} />
                 <Route path="/documents" element={<LenderDocuments />} />
               </Route>

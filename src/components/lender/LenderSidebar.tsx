@@ -1,9 +1,10 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Store, ClipboardCheck, FileText } from "lucide-react";
+import { LayoutDashboard, Store, ClipboardCheck, FileText, FileSearch } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "Dealers", to: "/dealers", icon: Store },
+  { label: "Pre-Onboarding", to: "/pre-onboarding", icon: FileSearch },
   { label: "Onboarding", to: "/onboarding", icon: ClipboardCheck },
   { label: "Documents", to: "/documents", icon: FileText },
 ];

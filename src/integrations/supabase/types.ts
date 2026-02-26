@@ -14,7 +14,141 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      banned_entities: {
+        Row: {
+          banned_at: string
+          banned_by: string
+          company_name: string | null
+          created_at: string
+          entity_name: string
+          entity_type: string
+          failed_checks: string[] | null
+          id: string
+          notes: string | null
+          reason: string
+        }
+        Insert: {
+          banned_at?: string
+          banned_by: string
+          company_name?: string | null
+          created_at?: string
+          entity_name: string
+          entity_type: string
+          failed_checks?: string[] | null
+          id?: string
+          notes?: string | null
+          reason: string
+        }
+        Update: {
+          banned_at?: string
+          banned_by?: string
+          company_name?: string | null
+          created_at?: string
+          entity_name?: string
+          entity_type?: string
+          failed_checks?: string[] | null
+          id?: string
+          notes?: string | null
+          reason?: string
+        }
+        Relationships: []
+      }
+      dealer_documents: {
+        Row: {
+          category: string
+          created_at: string
+          dealer_name: string
+          description: string | null
+          expiry_date: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          dealer_name: string
+          description?: string | null
+          expiry_date?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          dealer_name?: string
+          description?: string | null
+          expiry_date?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      onboarding_applications: {
+        Row: {
+          checklist_progress: Json | null
+          company_number: string | null
+          created_at: string
+          dealer_name: string
+          failure_reason: string | null
+          id: string
+          qualification_notes: string | null
+          screening_results: Json | null
+          segmentation: Json | null
+          stage: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          checklist_progress?: Json | null
+          company_number?: string | null
+          created_at?: string
+          dealer_name: string
+          failure_reason?: string | null
+          id?: string
+          qualification_notes?: string | null
+          screening_results?: Json | null
+          segmentation?: Json | null
+          stage?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          checklist_progress?: Json | null
+          company_number?: string | null
+          created_at?: string
+          dealer_name?: string
+          failure_reason?: string | null
+          id?: string
+          qualification_notes?: string | null
+          screening_results?: Json | null
+          segmentation?: Json | null
+          stage?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
