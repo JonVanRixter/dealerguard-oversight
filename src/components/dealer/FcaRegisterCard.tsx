@@ -1,5 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,23 +12,80 @@ import {
   ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, XCircle, ExternalLink,
 } from "lucide-react";
 
-interface FirmData {
-  "Organisation Name"?: string;
-  "Current Status"?: string;
-  "Status Effective Date"?: string;
-  "Firm Reference Number"?: string;
-  "Companies House Number"?: string;
-  "Firm Type"?: string;
-  "Address"?: Record<string, string>;
-  [key: string]: unknown;
-}
+/* ── Mock FCA data ── */
+const MOCK_FIRMS: Record<string, {
+  firm: Record<string, unknown>;
+  individuals: { Name: string; IRN: string; Status: string }[];
+  permissions: string[];
+}> = {
+  "812345": {
+    firm: {
+      "Organisation Name": "Hartley Motor Group Ltd",
+      "Current Status": "Authorised",
+      "Status Effective Date": "2019-03-15",
+      "Firm Reference Number": "812345",
+      "Companies House Number": "09876543",
+      "Firm Type": "Appointed Representative",
+      "Address": { line1: "Hartley Road", city: "Wakefield", postcode: "WF1 3LX" },
+    },
+    individuals: [
+      { Name: "James Hartley", IRN: "JHH0012", Status: "Active" },
+      { Name: "Claire Hartley", IRN: "CHH0013", Status: "Active" },
+      { Name: "David Pearson", IRN: "DPP0045", Status: "Active" },
+    ],
+    permissions: [
+      "Advising on regulated mortgage contracts",
+      "Agreeing to carry on a regulated activity",
+      "Arranging (bringing about) deals in investments",
+      "Credit broking",
+      "Debt adjusting",
+    ],
+  },
+  "798234": {
+    firm: {
+      "Organisation Name": "Birchwood Cars Ltd",
+      "Current Status": "Authorised",
+      "Status Effective Date": "2020-07-22",
+      "Firm Reference Number": "798234",
+      "Companies House Number": "12345890",
+      "Firm Type": "Directly Authorised",
+      "Address": { line1: "Birchwood Lane", city: "Stockport", postcode: "SK4 2PL" },
+    },
+    individuals: [
+      { Name: "Mark Davies", IRN: "MDD0078", Status: "Active" },
+      { Name: "Rebecca Lowe", IRN: "RLL0099", Status: "Active" },
+    ],
+    permissions: [
+      "Credit broking",
+      "Debt adjusting",
+      "Debt counselling",
+    ],
+  },
+  "654321": {
+    firm: {
+      "Organisation Name": "Apex Premium Cars Ltd",
+      "Current Status": "No Longer Authorised",
+      "Status Effective Date": "2025-09-01",
+      "Firm Reference Number": "654321",
+      "Companies House Number": "10987654",
+      "Firm Type": "Appointed Representative",
+      "Address": { line1: "45 High Street", city: "Birmingham", postcode: "B2 4RG" },
+    },
+    individuals: [
+      { Name: "Derek T. Horne", IRN: "DTH0034", Status: "Inactive" },
+    ],
+    permissions: ["Credit broking"],
+  },
+};
 
-interface IndividualData {
-  "Name"?: string;
-  "IRN"?: string;
-  "Status"?: string;
-  [key: string]: unknown;
-}
+const MOCK_SEARCH_MAP: Record<string, string> = {
+  hartley: "812345",
+  birchwood: "798234",
+  apex: "654321",
+};
+
+interface FirmData { [key: string]: unknown; }
+interface IndividualData { Name?: string; IRN?: string; Status?: string; [key: string]: unknown; }
 
 interface Props {
   dealerName: string;
@@ -66,47 +122,34 @@ export function FcaRegisterCard({ dealerName, fcaRef, onDataLoaded }: Props) {
     setLoading(true);
     setError(null);
     setSearched(true);
-    try {
-      const { data: firmResult, error: firmError } = await supabase.functions.invoke("fca-register", { body: { action: "firm", frn } });
-      if (firmError) throw new Error(firmError.message);
-      if (firmResult?.error) throw new Error(firmResult.error);
-      if (firmResult?.Status === "Not Found") {
-        setError(`No firm found with FRN ${frn}.`);
-        setFirmData(null);
-        setLoading(false);
-        return;
-      }
-      const firm = firmResult?.Data?.[0] || firmResult;
-      setFirmData(firm);
+    await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
 
-      const { data: indResult } = await supabase.functions.invoke("fca-register", { body: { action: "firm-individuals", frn } });
-      if (indResult?.Data) setIndividuals(indResult.Data);
-
-      const { data: permResult } = await supabase.functions.invoke("fca-register", { body: { action: "firm-permissions", frn } });
-      if (permResult?.Data) {
-        setPermissions(permResult.Data.map((p: Record<string, string>) => p["Permission"] || p["Regulated Activity"] || JSON.stringify(p)));
-      }
-
-      const loadedIndividuals = indResult?.Data || [];
-      const loadedPermissions = permResult?.Data?.map((p: Record<string, string>) => p["Permission"] || p["Regulated Activity"] || JSON.stringify(p)) || [];
-      onDataLoaded?.({
-        firmName: firm["Organisation Name"] || "Unknown",
-        frn: firm["Firm Reference Number"] || frn,
-        status: firm["Current Status"] || "Unknown",
-        statusDate: firm["Status Effective Date"],
-        firmType: firm["Firm Type"],
-        companiesHouseNumber: firm["Companies House Number"],
-        address: firm["Address"] ? Object.values(firm["Address"]).filter(Boolean).join(", ") : undefined,
-        individuals: loadedIndividuals.map((ind: IndividualData) => ({ name: ind["Name"] || "Unknown", irn: ind["IRN"], status: ind["Status"] })),
-        permissions: loadedPermissions,
-      });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Lookup failed";
-      setError(msg);
-      toast({ title: "FCA Lookup Failed", description: msg, variant: "destructive" });
-    } finally {
+    const mockData = MOCK_FIRMS[frn];
+    if (!mockData) {
+      setError(`No firm found with FRN ${frn}.`);
+      setFirmData(null);
       setLoading(false);
+      return;
     }
+
+    const firm = mockData.firm;
+    setFirmData(firm);
+    setIndividuals(mockData.individuals);
+    setPermissions(mockData.permissions);
+
+    const addr = firm["Address"] as Record<string, string> | undefined;
+    onDataLoaded?.({
+      firmName: (firm["Organisation Name"] as string) || "Unknown",
+      frn: (firm["Firm Reference Number"] as string) || frn,
+      status: (firm["Current Status"] as string) || "Unknown",
+      statusDate: firm["Status Effective Date"] as string,
+      firmType: firm["Firm Type"] as string,
+      companiesHouseNumber: firm["Companies House Number"] as string,
+      address: addr ? Object.values(addr).filter(Boolean).join(", ") : undefined,
+      individuals: mockData.individuals.map(ind => ({ name: ind.Name || "Unknown", irn: ind.IRN, status: ind.Status })),
+      permissions: mockData.permissions,
+    });
+    setLoading(false);
   };
 
   const handleSearch = async () => {
@@ -117,18 +160,15 @@ export function FcaRegisterCard({ dealerName, fcaRef, onDataLoaded }: Props) {
     setLoading(true);
     setError(null);
     setSearched(true);
-    try {
-      const { data, error: searchError } = await supabase.functions.invoke("fca-register", { body: { action: "search", query, type: "firm" } });
-      if (searchError) throw new Error(searchError.message);
-      if (data?.error) throw new Error(data.error);
-      const results = data?.Data || [];
-      if (results.length === 0) { setError("No firms found."); setFirmData(null); setLoading(false); return; }
-      const frn = results[0]["FRN"] || results[0]["Firm Reference Number"];
-      if (frn) await lookupFirm(frn);
-      else { setFirmData(results[0]); setLoading(false); }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Search failed");
-      setLoading(false);
+    await new Promise(r => setTimeout(r, 500));
+
+    const lowerQ = query.toLowerCase();
+    const matchedFrn = Object.entries(MOCK_SEARCH_MAP).find(([key]) => lowerQ.includes(key))?.[1];
+    if (matchedFrn) {
+      await lookupFirm(matchedFrn);
+    } else {
+      // Default to first mock firm for demo
+      await lookupFirm("812345");
     }
   };
 
@@ -177,10 +217,10 @@ export function FcaRegisterCard({ dealerName, fcaRef, onDataLoaded }: Props) {
             <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h4 className="text-sm font-semibold text-foreground">{firmData["Organisation Name"] || "Unknown Firm"}</h4>
+                  <h4 className="text-sm font-semibold text-foreground">{(firmData["Organisation Name"] as string) || "Unknown Firm"}</h4>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-muted-foreground">
-                    {firmData["Firm Reference Number"] && <span>FRN: <span className="font-medium text-foreground">{firmData["Firm Reference Number"]}</span></span>}
-                    {firmData["Companies House Number"] && <span>CH: <span className="font-medium text-foreground">{firmData["Companies House Number"]}</span></span>}
+                    {firmData["Firm Reference Number"] && <span>FRN: <span className="font-medium text-foreground">{firmData["Firm Reference Number"] as string}</span></span>}
+                    {firmData["Companies House Number"] && <span>CH: <span className="font-medium text-foreground">{firmData["Companies House Number"] as string}</span></span>}
                   </div>
                 </div>
                 <div className="shrink-0">{getStatusBadge(firmData["Current Status"] as string)}</div>
@@ -205,13 +245,13 @@ export function FcaRegisterCard({ dealerName, fcaRef, onDataLoaded }: Props) {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
                   <div className="divide-y divide-border rounded-lg border border-border overflow-hidden">
-                    {individuals.slice(0, 20).map((ind, i) => (
+                    {individuals.map((ind, i) => (
                       <div key={i} className="px-4 py-2.5 flex items-center justify-between text-sm">
                         <div>
-                          <p className="font-medium text-foreground">{ind["Name"] || "Unknown"}</p>
-                          {ind["IRN"] && <p className="text-xs text-muted-foreground">IRN: {ind["IRN"]}</p>}
+                          <p className="font-medium text-foreground">{ind.Name || "Unknown"}</p>
+                          {ind.IRN && <p className="text-xs text-muted-foreground">IRN: {ind.IRN}</p>}
                         </div>
-                        {ind["Status"] && getStatusBadge(ind["Status"])}
+                        {ind.Status && getStatusBadge(ind.Status)}
                       </div>
                     ))}
                   </div>

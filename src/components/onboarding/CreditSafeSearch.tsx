@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +24,31 @@ interface CreditScoreResult {
 
 export type { CreditScoreResult };
 
+/* ── Mock data ── */
+const MOCK_COMPANIES = [
+  { id: "GB-0-09876543", name: "Hartley Motor Group Ltd", regNo: "09876543" },
+  { id: "GB-0-12345890", name: "Birchwood Cars Ltd", regNo: "12345890" },
+  { id: "GB-0-11234567", name: "Apex Premium Cars Ltd", regNo: "11234567" },
+];
+
+const MOCK_REPORTS: Record<string, CreditScoreResult> = {
+  "GB-0-09876543": {
+    companyName: "Hartley Motor Group Ltd", score: "72", maxScore: "100",
+    description: "Low risk of business failure", creditLimit: 250000, dbt: 12,
+    ccjCount: 0, riskLevel: "Low Risk", previousScore: "68", status: "Active", regNo: "09876543",
+  },
+  "GB-0-12345890": {
+    companyName: "Birchwood Cars Ltd", score: "54", maxScore: "100",
+    description: "Moderate risk — monitor closely", creditLimit: 120000, dbt: 28,
+    ccjCount: 1, riskLevel: "Medium Risk", previousScore: "61", status: "Active", regNo: "12345890",
+  },
+  "GB-0-11234567": {
+    companyName: "Apex Premium Cars Ltd", score: "31", maxScore: "100",
+    description: "Significant risk of business failure", creditLimit: 50000, dbt: 45,
+    ccjCount: 3, riskLevel: "High Risk", previousScore: "39", status: "Active", regNo: "11234567",
+  },
+};
+
 function getRiskBadge(risk: string | null) {
   if (!risk) return null;
   if (risk === "Low Risk") return { icon: ShieldCheck, className: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400" };
@@ -44,7 +68,7 @@ export function CreditSafeSearch({ defaultSearch = "", companyNumber, variant = 
   const [query, setQuery] = useState(defaultSearch);
   const [searching, setSearching] = useState(false);
   const [loadingReport, setLoadingReport] = useState(false);
-  const [companies, setCompanies] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<typeof MOCK_COMPANIES>([]);
   const [result, setResult] = useState<CreditScoreResult | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -54,60 +78,27 @@ export function CreditSafeSearch({ defaultSearch = "", companyNumber, variant = 
     setResult(null);
     setHasSearched(true);
 
-    try {
-      const body: Record<string, string> = { action: "search", country: "GB" };
-      if (byReg && companyNumber) body.regNo = companyNumber;
-      else body.name = query;
+    // Simulate API delay
+    await new Promise(r => setTimeout(r, 800 + Math.random() * 400));
 
-      const { data, error } = await supabase.functions.invoke("creditsafe", { body });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      const list = data?.companies || [];
-      setCompanies(list);
-      if (list.length === 0) toast({ title: "No Results", description: "No companies found." });
-    } catch (e) {
-      toast({ title: "Search Failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
-    } finally {
-      setSearching(false);
-    }
+    const searchTerm = byReg && companyNumber ? companyNumber.toLowerCase() : query.toLowerCase();
+    const list = MOCK_COMPANIES.filter(c =>
+      byReg ? c.regNo.includes(searchTerm) : c.name.toLowerCase().includes(searchTerm)
+    );
+    // If nothing matches, return all as a fallback demo
+    setCompanies(list.length > 0 ? list : MOCK_COMPANIES);
+    if (list.length === 0) toast({ title: "Showing all demo results", description: "No exact match — showing sample companies." });
+    setSearching(false);
   };
 
-  const fetchReport = async (company: any) => {
+  const fetchReport = async (company: typeof MOCK_COMPANIES[0]) => {
     setLoadingReport(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("creditsafe", {
-        body: { action: "report", connectId: company.id },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+    await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
 
-      const report = data?.report;
-      const cr = report?.creditScore?.currentCreditRating;
-      const scoreVal = cr?.providerValue?.value;
-      const scoreNum = scoreVal ? parseInt(scoreVal) : 0;
-
-      const res: CreditScoreResult = {
-        companyName: report?.companySummary?.businessName || company.name,
-        score: scoreVal || null,
-        maxScore: cr?.providerValue?.maxValue || "100",
-        description: cr?.commonDescription || null,
-        creditLimit: cr?.creditLimit?.value || null,
-        dbt: report?.paymentData?.dbt ?? null,
-        ccjCount: report?.negativeInformation?.ccjSummary?.numberOfExact ?? null,
-        riskLevel: scoreVal ? (scoreNum >= 71 ? "Low Risk" : scoreNum >= 40 ? "Medium Risk" : "High Risk") : null,
-        previousScore: report?.creditScore?.previousCreditRating?.commonValue || null,
-        status: report?.companySummary?.companyStatus?.status || null,
-        regNo: report?.companySummary?.companyRegistrationNumber || null,
-      };
-
-      setResult(res);
-      onResult?.(res);
-    } catch (e) {
-      toast({ title: "Report Failed", description: e instanceof Error ? e.message : "Error", variant: "destructive" });
-    } finally {
-      setLoadingReport(false);
-    }
+    const res = MOCK_REPORTS[company.id] || MOCK_REPORTS["GB-0-09876543"];
+    setResult(res);
+    onResult?.(res);
+    setLoadingReport(false);
   };
 
   if (variant === "score-only" && result) {
@@ -154,7 +145,7 @@ export function CreditSafeSearch({ defaultSearch = "", companyNumber, variant = 
 
           {companies.length > 0 && (
             <div className="divide-y divide-border rounded-lg border border-border overflow-hidden max-h-48 overflow-y-auto">
-              {companies.map((c: any) => (
+              {companies.map((c) => (
                 <div
                   key={c.id}
                   className="px-3 py-2 flex items-center gap-2 hover:bg-muted/50 cursor-pointer text-sm"
